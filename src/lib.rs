@@ -1,16 +1,26 @@
 //! Load and disply simple SVG files in Bevy.
 //!
-//! This crate provides a Bevy `Plugin` to easily load and display a simple SVG file.
-//! It currently only works for the most simple SVGs.
+//! This crate provides a Bevy [`Plugin`] to easily load and display a simple
+//! SVG file. It currently only works for the most simple SVGs.
 //!
 //! ## Usage
-//! Simply add the crate in your `Cargo.toml` and add the plugin to your app
+//! Simply add the crate in your `Cargo.toml` and add the plugin to your app:
 //!
 //! ```rust
 //! fn main() {
-//!     App::build()
-//!         .add_plugin(bevy_svg::prelude::SvgPlugin)
-//!         .run();
+//!     App::build().add_plugin(bevy_svg::SvgPlugin).run();
+//! }
+//! ```
+//!
+//! You can now create an entity rendered with a svg:
+//!
+//! ```rust
+//! fn spawn_svp_entity(mut commands: Commands, asset_server: ResMut<AssetServer>) {
+//!     commands.spawn_bundle(SvgBundle::build(SvgBundleConfig {
+//!         svg:      asset_server.load("some.svg"),
+//!         position: Vec3::new(0.0, 0.0, 0.0),
+//!         scale:    Vec2::new(1.0, 1.0),
+//!     }));
 //! }
 //! ```
 
@@ -27,22 +37,22 @@
     clippy::cargo
 )]
 
+use bevy::prelude::*;
+
 mod bundle;
+mod loader;
 mod plugin;
+mod render;
 mod svg;
 mod vertex_buffer;
 
-/// Import this module as `use bevy_svg::prelude::*` to get
-/// convenient imports.
-pub mod prelude {
-    pub use crate::{bundle::SvgBundle, plugin::SvgPlugin, svg::{SvgBuilder, Origin}};
-    pub use lyon_tessellation::{
-        FillOptions, FillRule, LineCap, LineJoin, Orientation, StrokeOptions,
-    };
-}
+pub use crate::{
+    bundle::{SvgBundle, SvgBundleConfig},
+    plugin::SvgPlugin,
+};
 
 /// A locally defined [`std::convert::Into`] surrogate to overcome orphan rules.
-pub trait Convert<T>: Sized {
+trait Convert<T>: Sized {
     /// Converts the value to `T`.
     fn convert(self) -> T;
 }

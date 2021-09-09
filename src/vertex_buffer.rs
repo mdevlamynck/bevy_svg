@@ -1,8 +1,11 @@
-use bevy::render::{
-    color::Color, mesh::{Indices, Mesh},
-    pipeline::PrimitiveTopology,
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
-use lyon_tessellation::{self, FillVertex, FillVertexConstructor, StrokeVertex, StrokeVertexConstructor};
+use lyon_tessellation::{
+    self, FillVertex, FillVertexConstructor, StrokeVertex, StrokeVertexConstructor,
+};
+
 use crate::Convert;
 
 /// A vertex with all the necessary attributes to be inserted into a Bevy
@@ -10,9 +13,9 @@ use crate::Convert;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Vertex {
     position: [f32; 3],
-    normal: [f32; 3],
-    uv: [f32; 2],
-    color: [f32; 4],
+    normal:   [f32; 3],
+    uv:       [f32; 2],
+    color:    [f32; 4],
 }
 
 /// The index type of a Bevy [`Mesh`](bevy::render::mesh::Mesh).
@@ -37,28 +40,17 @@ impl Convert<Mesh> for VertexBuffers {
 
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.set_indices(Some(Indices::U32(self.indices.clone())));
-        mesh.set_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            positions
-        );
-        mesh.set_attribute(
-            Mesh::ATTRIBUTE_NORMAL,
-            normals
-        );
-        mesh.set_attribute(
-            Mesh::ATTRIBUTE_UV_0,
-            uvs
-        );
-        mesh.set_attribute(
-            Mesh::ATTRIBUTE_COLOR,
-            colors
-        );
+        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        mesh.set_attribute(Mesh::ATTRIBUTE_COLOR, colors);
 
         mesh
     }
 }
 
-/// Zero-sized type used to implement various vertex construction traits from Lyon.
+/// Zero-sized type used to implement various vertex construction traits from
+/// Lyon.
 pub(crate) struct VertexConstructor {
     pub(crate) color: Color,
 }
@@ -68,9 +60,14 @@ impl FillVertexConstructor<Vertex> for VertexConstructor {
     fn new_vertex(&mut self, vertex: FillVertex) -> Vertex {
         Vertex {
             position: [vertex.position().x, vertex.position().y, 0.0],
-            normal: [0.0, 0.0, 1.0],
-            uv: [0.0, 0.0],
-            color: [self.color.r(), self.color.g(), self.color.b(), self.color.a()],
+            normal:   [0.0, 0.0, 1.0],
+            uv:       [0.0, 0.0],
+            color:    [
+                self.color.r(),
+                self.color.g(),
+                self.color.b(),
+                self.color.a(),
+            ],
         }
     }
 }
@@ -80,9 +77,14 @@ impl StrokeVertexConstructor<Vertex> for VertexConstructor {
     fn new_vertex(&mut self, vertex: StrokeVertex) -> Vertex {
         Vertex {
             position: [vertex.position().x, vertex.position().y, 0.0],
-            normal: [0.0, 0.0, 1.0],
-            uv: [0.0, 0.0],
-            color: [self.color.r(), self.color.g(), self.color.b(), self.color.a()],
+            normal:   [0.0, 0.0, 1.0],
+            uv:       [0.0, 0.0],
+            color:    [
+                self.color.r(),
+                self.color.g(),
+                self.color.b(),
+                self.color.a(),
+            ],
         }
     }
 }
