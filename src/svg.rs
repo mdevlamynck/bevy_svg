@@ -1,6 +1,7 @@
 use bevy::{prelude::*, reflect::TypeUuid};
 use lyon_svg::parser::ViewBox;
 use lyon_tessellation::{self};
+use lyon_geom::Transform;
 
 /// A loaded and deserialized SVG file.
 #[derive(Debug, TypeUuid)]
@@ -19,6 +20,7 @@ pub struct Svg {
 #[derive(Debug)]
 pub struct PathDescriptor {
     pub segments:  Vec<lyon_svg::path::PathEvent>,
+    pub transform: Transform<f32>,
     pub color:     Color,
     pub draw_type: DrawType,
 }

@@ -1,20 +1,17 @@
 use bevy::{
     prelude::*,
-    render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
 use lyon_tessellation::{
     self, FillVertex, FillVertexConstructor, StrokeVertex, StrokeVertexConstructor,
 };
-
-use crate::Convert;
+use lyon_geom::{Transform, Point};
+use bevy::render::{mesh::{Mesh, Indices}, pipeline::PrimitiveTopology};
 
 /// A vertex with all the necessary attributes to be inserted into a Bevy
 /// [`Mesh`](bevy::render::mesh::Mesh).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Vertex {
     position: [f32; 3],
-    normal:   [f32; 3],
-    uv:       [f32; 2],
     color:    [f32; 4],
 }
 
@@ -23,31 +20,6 @@ pub(crate) type IndexType = u32;
 
 /// Lyon's [`VertexBuffers`] generic data type defined for [`Vertex`].
 pub(crate) type VertexBuffers = lyon_tessellation::VertexBuffers<Vertex, IndexType>;
-
-impl Convert<Mesh> for VertexBuffers {
-    fn convert(self) -> Mesh {
-        let mut positions = Vec::with_capacity(self.vertices.len());
-        let mut normals = Vec::with_capacity(self.vertices.len());
-        let mut uvs = Vec::with_capacity(self.vertices.len());
-        let mut colors = Vec::with_capacity(self.vertices.len());
-
-        self.vertices.iter().for_each(|v| {
-            positions.push(v.position);
-            normals.push(v.normal);
-            uvs.push(v.uv);
-            colors.push(v.color);
-        });
-
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        mesh.set_indices(Some(Indices::U32(self.indices.clone())));
-        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        mesh.set_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-
-        mesh
-    }
-}
 
 /// Zero-sized type used to implement various vertex construction traits from
 /// Lyon.
@@ -60,8 +32,6 @@ impl FillVertexConstructor<Vertex> for VertexConstructor {
     fn new_vertex(&mut self, vertex: FillVertex) -> Vertex {
         Vertex {
             position: [vertex.position().x, vertex.position().y, 0.0],
-            normal:   [0.0, 0.0, 1.0],
-            uv:       [0.0, 0.0],
             color:    [
                 self.color.r(),
                 self.color.g(),
@@ -77,8 +47,6 @@ impl StrokeVertexConstructor<Vertex> for VertexConstructor {
     fn new_vertex(&mut self, vertex: StrokeVertex) -> Vertex {
         Vertex {
             position: [vertex.position().x, vertex.position().y, 0.0],
-            normal:   [0.0, 0.0, 1.0],
-            uv:       [0.0, 0.0],
             color:    [
                 self.color.r(),
                 self.color.g(),
@@ -87,4 +55,44 @@ impl StrokeVertexConstructor<Vertex> for VertexConstructor {
             ],
         }
     }
+}
+
+pub(crate) fn apply_transform(buffer: &mut VertexBuffers, transform: Transform<f32>) {
+    for mut vertex in buffer.vertices.iter_mut() {
+        let pos = transform.transform_point(Point::new(vertex.position[0], vertex.position[1]));
+
+        vertex.position[0] = pos.x;
+        vertex.position[1] = pos.y;
+    }
+}
+
+pub(crate) fn merge_buffers(buffers: Vec<VertexBuffers>) -> VertexBuffers {
+    let mut buffer = VertexBuffers::new();
+    let mut offset = 0;
+
+    for buf in buffers.iter() {
+        buffer.vertices.extend(&buf.vertices);
+        buffer.indices.extend(buf.indices.iter().map(|i| i + offset));
+
+        offset += buf.vertices.len() as u32;
+    }
+
+    buffer
+}
+
+pub(crate) fn to_mesh(buffer: VertexBuffers) -> Mesh {
+    let mut positions = Vec::with_capacity(buffer.vertices.len());
+    let mut colors = Vec::with_capacity(buffer.vertices.len());
+
+    buffer.vertices.iter().for_each(|v| {
+        positions.push(v.position);
+        colors.push(v.color);
+    });
+
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    mesh.set_indices(Some(Indices::U32(buffer.indices.clone())));
+    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.set_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+
+    mesh
 }

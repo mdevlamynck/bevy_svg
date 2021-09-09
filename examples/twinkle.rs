@@ -21,6 +21,6 @@ fn setup(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     commands.spawn_bundle(SvgBundle::build(SvgBundleConfig {
         svg:      asset_server.load("twinkle.svg"),
         position: Vec3::new(0.0, 0.0, 0.0),
-        scale:    Vec2::new(0.5, 0.5),
+        ..Default::default()
     }));
 }

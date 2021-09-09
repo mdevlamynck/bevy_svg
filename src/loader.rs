@@ -75,7 +75,7 @@ pub fn svg_mesh_generator(
 
 mod svg {
     use bevy::prelude::*;
-    use lyon_geom::{Transform, Translation};
+    use lyon_geom::{Transform, Vector};
     use lyon_svg::parser::ViewBox;
     use lyon_tessellation::{self, math::Point};
 
@@ -84,14 +84,21 @@ mod svg {
     pub fn parse_svg<'s>(svg_tree: usvg::Tree) -> Svg {
         let view_box = svg_tree.svg_node().view_box;
         let size = svg_tree.svg_node().size;
-        let origin_center = Translation::new(-size.width() as f32 / 2., -size.height() as f32 / 2.);
+        let origin_center = Vector::new(-size.width() as f32 / 2., -size.height() as f32 / 2.);
 
         let mut descriptors = Vec::new();
 
         for node in svg_tree.root().descendants() {
             if let usvg::NodeKind::Path(ref p) = *node.borrow() {
-                let scale = p.transform.get_scale().0 as f32;
-                let transform = Transform::new(
+                // For some reason transform has sometimes negative scale values.
+                // Here we correct to positive values.
+                let (correct_scale_x, correct_scale_y) = (
+                    if p.transform.a < 0.0 { -1.0 } else { 1.0 },
+                    if p.transform.d < 0.0 { -1.0 } else { 1.0 },
+                );
+                let correct_scale = Transform::scale(correct_scale_x, correct_scale_y);
+
+                let mut transform = Transform::new(
                     p.transform.a as f32,
                     p.transform.b as f32,
                     p.transform.c as f32,
@@ -99,6 +106,8 @@ mod svg {
                     p.transform.e as f32,
                     p.transform.f as f32
                 );
+                transform = transform.pre_scale(correct_scale_x, correct_scale_y);
+                transform = transform.then_translate(origin_center);
 
                 if let Some(ref fill) = p.fill {
                     let color = match fill.paint {
@@ -110,22 +119,22 @@ mod svg {
 
                     descriptors.push(PathDescriptor {
                         segments: convert_path(p)
-                            .map(|p| p.transformed(&transform))
-                            .map(|p| p.transformed(&origin_center))
+                            .map(|p| p.transformed(&correct_scale))
                             .collect(),
+                        transform,
                         color,
                         draw_type: DrawType::Fill,
                     });
                 }
 
                 if let Some(ref stroke) = p.stroke {
-                    let (color, stroke_opts) = convert_stroke(stroke, scale);
+                    let (color, stroke_opts) = convert_stroke(stroke);
 
                     descriptors.push(PathDescriptor {
                         segments: convert_path(p)
-                            .map(|p| p.transformed(&transform))
-                            .map(|p| p.transformed(&origin_center))
+                            .map(|p| p.transformed(&correct_scale))
                             .collect(),
+                        transform,
                         color,
                         draw_type: DrawType::Stroke(stroke_opts),
                     });
@@ -252,7 +261,7 @@ mod svg {
         }
     }
 
-    fn convert_stroke(s: &usvg::Stroke, scale: f32) -> (Color, lyon_tessellation::StrokeOptions) {
+    fn convert_stroke(s: &usvg::Stroke) -> (Color, lyon_tessellation::StrokeOptions) {
         let color = match s.paint {
             usvg::Paint::Color(c) => Color::rgba_u8(c.red, c.green, c.blue, s.opacity.to_u8()),
             _ => Color::default(),
@@ -279,15 +288,15 @@ mod svg {
 }
 
 mod tesselation {
-    use bevy::prelude::*;
+    use bevy::log::error;
+    use bevy::render::mesh::Mesh;
     use lyon_tessellation::{
         self, BuffersBuilder, FillOptions, FillTessellator, StrokeTessellator,
     };
 
     use crate::{
         svg::{DrawType, Svg},
-        vertex_buffer::{VertexBuffers, VertexConstructor},
-        Convert,
+        vertex_buffer::{VertexBuffers, VertexConstructor, to_mesh, apply_transform, merge_buffers},
     };
 
     pub fn generate_mesh(
@@ -295,21 +304,24 @@ mod tesselation {
         fill_tess: &mut FillTessellator,
         stroke_tess: &mut StrokeTessellator,
     ) -> Mesh {
-        let mut buffers = VertexBuffers::new();
+        let mut vertex_buffers = Vec::new();
 
         // TODO: still need to do something about the color, it is pretty washed out
         let mut color = None;
 
         for path in svg.paths.iter() {
+            let mut vertex_buffer = VertexBuffers::new();
+
             if color.is_none() {
                 color = Some(path.color);
             }
+
             match path.draw_type {
                 DrawType::Fill => {
                     if let Err(e) = fill_tess.tessellate(
                         path.segments.clone(),
                         &FillOptions::tolerance(0.001),
-                        &mut BuffersBuilder::new(&mut buffers, VertexConstructor {
+                        &mut BuffersBuilder::new(&mut vertex_buffer, VertexConstructor {
                             color: path.color,
                         }),
                     ) {
@@ -320,7 +332,7 @@ mod tesselation {
                     if let Err(e) = stroke_tess.tessellate(
                         path.segments.clone(),
                         &opts,
-                        &mut BuffersBuilder::new(&mut buffers, VertexConstructor {
+                        &mut BuffersBuilder::new(&mut vertex_buffer, VertexConstructor {
                             color: path.color,
                         }),
                     ) {
@@ -328,8 +340,11 @@ mod tesselation {
                     }
                 },
             }
+
+            apply_transform(&mut vertex_buffer, path.transform);
+            vertex_buffers.push(vertex_buffer);
         }
 
-        buffers.convert()
+        to_mesh(merge_buffers(vertex_buffers))
     }
 }

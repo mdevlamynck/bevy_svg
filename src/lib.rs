@@ -50,9 +50,3 @@ pub use crate::{
     bundle::{SvgBundle, SvgBundleConfig},
     plugin::SvgPlugin,
 };
-
-/// A locally defined [`std::convert::Into`] surrogate to overcome orphan rules.
-trait Convert<T>: Sized {
-    /// Converts the value to `T`.
-    fn convert(self) -> T;
-}
