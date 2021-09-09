@@ -4,7 +4,7 @@
 //! minimal boilerplate.
 //!
 //! ## How it works
-//! The user spawns a [`SvgBundle`](crate::bundle::SvgBundle) from a
+//! The user spawns a [`SvgBundle`](bundle::SvgBundle) from a
 //! system in the [`Update`](bevy::app::CoreStage::Update) stage.
 //!
 //! Then, in the [`SVG`](Stage::SVG) stage, there is a system
@@ -19,13 +19,13 @@ use crate::{bundle, loader, render, svg};
 /// Stages for this plugin.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
 pub enum Stage {
-    /// Stage in which [`SvgBundle`](crate::bundle::SvgBundle)s get converted
+    /// Stage in which [`SvgBundle`](bundle::SvgBundle)s get converted
     /// into drawable meshes.
     SVG,
 }
 
-/// A plugin that provides resources and a system to draw [`SvgBundle`]s in Bevy
-/// with.
+/// A plugin that provides resources and a system to draw
+/// [`SvgBundle`](bundle::SvgBundle)s in Bevy with.
 pub struct SvgPlugin;
 
 impl Plugin for SvgPlugin {

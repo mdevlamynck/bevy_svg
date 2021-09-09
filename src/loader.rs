@@ -19,7 +19,7 @@ impl AssetLoader for SvgLoader {
         load_context: &'a mut LoadContext<'_>,
     ) -> BoxedFuture<Result<()>> {
         Box::pin(async move {
-            let tree = usvg::Tree::from_data(bytes, &Default::default())?;
+            let tree = usvg::Tree::from_data(bytes, &usvg::Options::default().to_ref())?;
             let svg = svg::parse_svg(tree);
 
             load_context.set_default_asset(LoadedAsset::new(svg));
@@ -75,7 +75,7 @@ pub fn svg_mesh_generator(
 
 mod svg {
     use bevy::prelude::*;
-    use lyon_geom::Translation;
+    use lyon_geom::{Transform, Translation};
     use lyon_svg::parser::ViewBox;
     use lyon_tessellation::{self, math::Point};
 
@@ -90,6 +90,16 @@ mod svg {
 
         for node in svg_tree.root().descendants() {
             if let usvg::NodeKind::Path(ref p) = *node.borrow() {
+                let scale = p.transform.get_scale().0 as f32;
+                let transform = Transform::new(
+                    p.transform.a as f32,
+                    p.transform.b as f32,
+                    p.transform.c as f32,
+                    p.transform.d as f32,
+                    p.transform.e as f32,
+                    p.transform.f as f32
+                );
+
                 if let Some(ref fill) = p.fill {
                     let color = match fill.paint {
                         usvg::Paint::Color(c) => {
@@ -100,6 +110,7 @@ mod svg {
 
                     descriptors.push(PathDescriptor {
                         segments: convert_path(p)
+                            .map(|p| p.transformed(&transform))
                             .map(|p| p.transformed(&origin_center))
                             .collect(),
                         color,
@@ -108,10 +119,11 @@ mod svg {
                 }
 
                 if let Some(ref stroke) = p.stroke {
-                    let (color, stroke_opts) = convert_stroke(stroke);
+                    let (color, stroke_opts) = convert_stroke(stroke, scale);
 
                     descriptors.push(PathDescriptor {
                         segments: convert_path(p)
+                            .map(|p| p.transformed(&transform))
                             .map(|p| p.transformed(&origin_center))
                             .collect(),
                         color,
@@ -240,7 +252,7 @@ mod svg {
         }
     }
 
-    fn convert_stroke(s: &usvg::Stroke) -> (Color, lyon_tessellation::StrokeOptions) {
+    fn convert_stroke(s: &usvg::Stroke, scale: f32) -> (Color, lyon_tessellation::StrokeOptions) {
         let color = match s.paint {
             usvg::Paint::Color(c) => Color::rgba_u8(c.red, c.green, c.blue, s.opacity.to_u8()),
             _ => Color::default(),
