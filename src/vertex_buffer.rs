@@ -1,11 +1,14 @@
 use bevy::{
     prelude::*,
+    render::{
+        mesh::{Indices, Mesh},
+        pipeline::PrimitiveTopology,
+    },
 };
+use lyon_geom::{Point, Transform};
 use lyon_tessellation::{
     self, FillVertex, FillVertexConstructor, StrokeVertex, StrokeVertexConstructor,
 };
-use lyon_geom::{Transform, Point};
-use bevy::render::{mesh::{Mesh, Indices}, pipeline::PrimitiveTopology};
 
 /// A vertex with all the necessary attributes to be inserted into a Bevy
 /// [`Mesh`](bevy::render::mesh::Mesh).
@@ -72,7 +75,9 @@ pub(crate) fn merge_buffers(buffers: Vec<VertexBuffers>) -> VertexBuffers {
 
     for buf in buffers.iter() {
         buffer.vertices.extend(&buf.vertices);
-        buffer.indices.extend(buf.indices.iter().map(|i| i + offset));
+        buffer
+            .indices
+            .extend(buf.indices.iter().map(|i| i + offset));
 
         offset += buf.vertices.len() as u32;
     }

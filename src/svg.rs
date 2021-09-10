@@ -1,7 +1,7 @@
 use bevy::{prelude::*, reflect::TypeUuid};
+use lyon_geom::Transform;
 use lyon_svg::parser::ViewBox;
 use lyon_tessellation::{self};
-use lyon_geom::Transform;
 
 /// A loaded and deserialized SVG file.
 #[derive(Debug, TypeUuid)]

@@ -14,10 +14,10 @@ pub struct SvgLoader;
 
 impl AssetLoader for SvgLoader {
     fn load<'a>(
-        &'a self,
+        &self,
         bytes: &'a [u8],
         load_context: &'a mut LoadContext<'_>,
-    ) -> BoxedFuture<Result<()>> {
+    ) -> BoxedFuture<'a, Result<()>> {
         Box::pin(async move {
             let mut options = usvg::Options::default();
             options.fontdb.load_system_fonts();
@@ -37,8 +37,7 @@ impl AssetLoader for SvgLoader {
     }
 }
 
-#[derive(Default)]
-pub struct SvgMeshMap(pub HashMap<Handle<Svg>, Handle<Mesh>>);
+pub type SvgMeshMap = HashMap<Handle<Svg>, Handle<Mesh>>;
 
 /// Maintains a mapping from [`Svg`] handle to [`Mesh`] handle.
 pub fn svg_mesh_generator(
@@ -56,18 +55,18 @@ pub fn svg_mesh_generator(
                 let mesh = tesselation::generate_mesh(&svg, &mut *fill_tess, &mut *stroke_tess);
 
                 let mesh_handle = mesh_store.add(mesh);
-                svg_mesh_map.0.insert(handle.clone_weak(), mesh_handle);
+                svg_mesh_map.insert(handle.clone_weak(), mesh_handle);
             },
             AssetEvent::Modified { handle } => {
                 let mesh = mesh_store
-                    .get_mut(svg_mesh_map.0.get(handle).unwrap())
+                    .get_mut(svg_mesh_map.get(handle).unwrap())
                     .unwrap();
 
                 let svg = svg_store.get(handle).unwrap();
                 *mesh = tesselation::generate_mesh(&svg, &mut *fill_tess, &mut *stroke_tess);
             },
             AssetEvent::Removed { handle } => {
-                let old_mesh = svg_mesh_map.0.remove(handle);
+                let old_mesh = svg_mesh_map.remove(handle);
 
                 if let Some(mesh_handle) = old_mesh {
                     mesh_store.remove(mesh_handle);
@@ -85,10 +84,10 @@ mod svg {
 
     use crate::svg::{DrawType, PathDescriptor, Svg};
 
-    pub fn parse_svg<'s>(svg_tree: usvg::Tree) -> Svg {
+    pub fn parse_svg(svg_tree: usvg::Tree) -> Svg {
         let view_box = svg_tree.svg_node().view_box;
         let size = svg_tree.svg_node().size;
-        let origin_center = Vector::new(-size.width() as f32 / 2., -size.height() as f32 / 2.);
+        let origin_center = Vector::new(-size.width() as f32 / 2.0, -size.height() as f32 / 2.0);
 
         let mut descriptors = Vec::new();
 
@@ -108,7 +107,7 @@ mod svg {
                     p.transform.c as f32,
                     p.transform.d as f32,
                     p.transform.e as f32,
-                    p.transform.f as f32
+                    p.transform.f as f32,
                 );
                 transform = transform.pre_scale(correct_scale_x, correct_scale_y);
                 transform = transform.then_translate(origin_center);
@@ -292,15 +291,16 @@ mod svg {
 }
 
 mod tesselation {
-    use bevy::log::error;
-    use bevy::render::mesh::Mesh;
+    use bevy::{log::error, render::mesh::Mesh};
     use lyon_tessellation::{
         self, BuffersBuilder, FillOptions, FillTessellator, StrokeTessellator,
     };
 
     use crate::{
         svg::{DrawType, Svg},
-        vertex_buffer::{VertexBuffers, VertexConstructor, to_mesh, apply_transform, merge_buffers},
+        vertex_buffer::{
+            apply_transform, merge_buffers, to_mesh, VertexBuffers, VertexConstructor,
+        },
     };
 
     pub fn generate_mesh(

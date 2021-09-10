@@ -1,4 +1,4 @@
-//! Load and disply simple SVG files in Bevy.
+//! Load and display simple SVG files in Bevy.
 //!
 //! This crate provides a Bevy [`Plugin`] to easily load and display a simple
 //! SVG file. It currently only works for the most simple SVGs.
@@ -6,7 +6,8 @@
 //! ## Usage
 //! Simply add the crate in your `Cargo.toml` and add the plugin to your app:
 //!
-//! ```rust
+//! ```no_run
+//! # use bevy::prelude::*;
 //! fn main() {
 //!     App::build().add_plugin(bevy_svg::SvgPlugin).run();
 //! }
@@ -14,7 +15,9 @@
 //!
 //! You can now create an entity rendered with a svg:
 //!
-//! ```rust
+//! ```no_run
+//! # use bevy::prelude::*;
+//! # use bevy_svg::*;
 //! fn spawn_svp_entity(mut commands: Commands, asset_server: ResMut<AssetServer>) {
 //!     commands.spawn_bundle(SvgBundle::build(SvgBundleConfig {
 //!         svg:      asset_server.load("some.svg"),

@@ -15,8 +15,8 @@ use crate::{loader::SvgMeshMap, render, svg::Svg};
 #[derive(Bundle)]
 pub struct SvgBundle {
     pub svg:              Handle<Svg>,
-    pub need_mesh_update: NeedMeshUpdate,
     pub mesh:             Handle<Mesh>,
+    pub need_mesh_update: NeedMeshUpdate,
     pub main_pass:        MainPass,
     pub draw:             Draw,
     pub visible:          Visible,
@@ -30,8 +30,8 @@ impl SvgBundle {
     pub fn build(config: SvgBundleConfig) -> SvgBundle {
         Self {
             svg:              config.svg,
-            need_mesh_update: Default::default(),
             mesh:             Default::default(),
+            need_mesh_update: Default::default(),
             main_pass:        MainPass,
             draw:             Default::default(),
             visible:          Visible {
@@ -66,7 +66,7 @@ impl Default for SvgBundleConfig {
     fn default() -> Self {
         Self {
             svg:      Default::default(),
-            position: Vec3::new(0., 0., 0.),
+            position: Vec3::new(0.0, 0.0, 0.0),
             scale:    Vec2::new(1.0, 1.0),
         }
     }
@@ -81,7 +81,7 @@ pub fn attach_mesh(
     mut query: Query<(Entity, &Handle<Svg>, &mut Handle<Mesh>, &mut Visible), With<NeedMeshUpdate>>,
 ) {
     for (entity, svg, mut mesh, mut visible) in query.iter_mut() {
-        if let Some(handle) = svg_mesh_map.0.get(svg) {
+        if let Some(handle) = svg_mesh_map.get(svg) {
             *mesh = handle.clone();
             visible.is_visible = true;
 

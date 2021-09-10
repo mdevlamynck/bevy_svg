@@ -19,7 +19,7 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(SvgBundle::build(SvgBundleConfig {
-        svg:      asset_server.load("twinkle.svg"),
+        svg: asset_server.load("twinkle.svg"),
         position: Vec3::new(0.0, 0.0, 0.0),
         ..Default::default()
     }));
