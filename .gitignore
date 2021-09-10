@@ -15,6 +15,9 @@
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 Cargo.lock
 
+### Jetbrains ###
+/.idea/
+
 ### vscode ###
 .vscode/*
 !.vscode/settings.json

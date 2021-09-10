@@ -19,7 +19,11 @@ impl AssetLoader for SvgLoader {
         load_context: &'a mut LoadContext<'_>,
     ) -> BoxedFuture<Result<()>> {
         Box::pin(async move {
-            let tree = usvg::Tree::from_data(bytes, &usvg::Options::default().to_ref())?;
+            let mut options = usvg::Options::default();
+            options.fontdb.load_system_fonts();
+            options.fontdb.load_fonts_dir("./assets");
+
+            let tree = usvg::Tree::from_data(bytes, &options.to_ref())?;
             let svg = svg::parse_svg(tree);
 
             load_context.set_default_asset(LoadedAsset::new(svg));
