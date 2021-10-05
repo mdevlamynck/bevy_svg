@@ -12,6 +12,9 @@ categories = ["Graphics", "Game engines", "Rendering"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+webgl2 = []
+
 [dependencies]
 anyhow = "1.0.43"
 bevy = { version = "0.5.0", default-features = false, features = ["render", "trace"] }
